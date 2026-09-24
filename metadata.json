@@ -1,0 +1,6 @@
+{
+  "name": "Cosmic Courier",
+  "description": "An arcade spaceflight delivery game where players pilot spaceships, navigate obstacle-filled cosmic routes, protect fragile packages, and land precisely.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
