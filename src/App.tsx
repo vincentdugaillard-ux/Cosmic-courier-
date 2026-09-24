@@ -31,6 +31,7 @@ import { ResultsView } from './components/ResultsView';
 import { HangarView } from './components/HangarView';
 import { SettingsModal } from './components/SettingsModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { MapEditor } from './components/MapEditor';
 
 export default function App() {
   const [profile, setProfile] = useState<PlayerProfile>(loadPlayerProfile);
@@ -185,6 +186,7 @@ export default function App() {
           onStartCampaign={() => setCurrentScreen('missionSelect')}
           onOpenContracts={() => setCurrentScreen('contracts')}
           onOpenHangar={() => setCurrentScreen('hangar')}
+          onOpenMapEditor={() => setCurrentScreen('mapEditor')}
           onOpenSettings={() => setShowSettingsModal(true)}
           onUpdateDifficulty={(diff: GameDifficulty) => handleUpdateSettings({ difficulty: diff })}
           onUpdateSettings={handleUpdateSettings}
@@ -199,6 +201,21 @@ export default function App() {
           onBackToMenu={() => setCurrentScreen('menu')}
           onOpenHangar={() => setCurrentScreen('hangar')}
           onOpenContracts={() => setCurrentScreen('contracts')}
+          onOpenMapEditor={() => setCurrentScreen('mapEditor')}
+        />
+      )}
+
+      {/* Sector Architect / Custom Map Editor */}
+      {currentScreen === 'mapEditor' && (
+        <MapEditor
+          profile={profile}
+          onExit={() => setCurrentScreen('menu')}
+          onTestFlight={(customMission: Mission) => {
+            setActiveMission(customMission);
+            setActiveContract(null);
+            triggerGameStart();
+            setCurrentScreen('game');
+          }}
         />
       )}
 

@@ -2,7 +2,7 @@
 import { Ship, Mission, PlayerProfile, Contract } from '../types/game';
 
 // Helper to generate jagged asteroid vertices
-function generateAsteroidVertices(radius: number, points: number = 8): { x: number; y: number }[] {
+export function generateAsteroidVertices(radius: number, points: number = 8): { x: number; y: number }[] {
   const vertices = [];
   for (let i = 0; i < points; i++) {
     const angle = (i / points) * Math.PI * 2;
@@ -989,6 +989,7 @@ export const DEFAULT_PLAYER_PROFILE: PlayerProfile = {
   bestTimes: {},
   settings: {
     difficulty: 'courier',
+    controlMode: 'laptop',
     fuelDepletion: true,
     mouseControls: true,
     masterVolume: 0.8,

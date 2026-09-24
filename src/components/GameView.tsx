@@ -5,7 +5,7 @@ import { GameEngine, GameEngineInput } from '../game/gameEngine';
 import { CanvasRenderer } from '../game/canvasRenderer';
 import { HUD } from './HUD';
 import { TouchControls } from './TouchControls';
-import { Play, RotateCcw, ArrowLeft, Home, AlertTriangle, Gamepad2, Flame } from 'lucide-react';
+import { Play, RotateCcw, ArrowLeft, Home, AlertTriangle, Gamepad2, Flame, Laptop, Smartphone } from 'lucide-react';
 import { soundManager } from '../audio/soundManager';
 
 interface GameViewProps {
@@ -63,6 +63,27 @@ export const GameView: React.FC<GameViewProps> = ({
     }
   }, [fuelDepletionActive, onUpdateSettings]);
 
+  // Control Mode state (Laptop / Desktop vs Phone / Touch)
+  const [controlMode, setControlMode] = useState<'laptop' | 'phone'>(
+    settings.controlMode ||
+      (typeof window !== 'undefined' &&
+      ('ontouchstart' in window || (navigator && navigator.maxTouchPoints > 0) || settings.showTouchControls)
+        ? 'phone'
+        : 'laptop')
+  );
+
+  const handleToggleControlMode = useCallback(() => {
+    soundManager.playUiClick();
+    const nextMode: 'laptop' | 'phone' = controlMode === 'phone' ? 'laptop' : 'phone';
+    setControlMode(nextMode);
+    if (onUpdateSettings) {
+      onUpdateSettings({ controlMode: nextMode });
+    }
+  }, [controlMode, onUpdateSettings]);
+
+  // Screen Touch Feedback Indicator
+  const [touchFeedback, setTouchFeedback] = useState<{ x: number; y: number } | null>(null);
+
   // Input states
   const inputRef = useRef<GameEngineInput>({
     turnLeft: false,
@@ -72,10 +93,68 @@ export const GameView: React.FC<GameViewProps> = ({
     boost: false,
   });
 
-  // Touch control visibility detection
-  const isTouchDevice =
-    typeof window !== 'undefined' &&
-    ('ontouchstart' in window || navigator.maxTouchPoints > 0 || settings.showTouchControls);
+  // Direct Screen Touch Controls Handler (Play by touching the phone screen)
+  const updateTouchCoordinates = useCallback((touch: React.Touch | Touch) => {
+    const canvas = canvasRef.current;
+    const engine = engineRef.current;
+    if (!canvas || !engine) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const screenX = touch.clientX - rect.left;
+    const screenY = touch.clientY - rect.top;
+
+    setTouchFeedback({ x: screenX, y: screenY });
+
+    const cam = engine.camera;
+    const w = canvas.width;
+    const h = canvas.height;
+
+    const relX = screenX - w / 2;
+    const relY = screenY - h / 2;
+    const worldX = cam.x + relX / cam.zoom;
+    const worldY = cam.y + relY / cam.zoom;
+
+    const angle = Math.atan2(worldY - engine.ship.y, worldX - engine.ship.x);
+
+    inputRef.current.touchActive = true;
+    inputRef.current.touchWorldX = worldX;
+    inputRef.current.touchWorldY = worldY;
+    inputRef.current.touchAngle = angle;
+    inputRef.current.touchThrust = true;
+  }, []);
+
+  const handleCanvasTouchStart = useCallback(
+    (e: React.TouchEvent<HTMLCanvasElement>) => {
+      if (isPaused || missionFailed) return;
+      if (e.touches.length > 0) {
+        updateTouchCoordinates(e.touches[0]);
+      }
+    },
+    [isPaused, missionFailed, updateTouchCoordinates]
+  );
+
+  const handleCanvasTouchMove = useCallback(
+    (e: React.TouchEvent<HTMLCanvasElement>) => {
+      if (isPaused || missionFailed) return;
+      if (e.touches.length > 0) {
+        updateTouchCoordinates(e.touches[0]);
+      }
+    },
+    [isPaused, missionFailed, updateTouchCoordinates]
+  );
+
+  const handleCanvasTouchEnd = useCallback(
+    (e: React.TouchEvent<HTMLCanvasElement>) => {
+      if (e.touches.length === 0) {
+        inputRef.current.touchActive = false;
+        inputRef.current.touchThrust = false;
+        setTouchFeedback(null);
+      } else {
+        updateTouchCoordinates(e.touches[0]);
+      }
+    },
+    [updateTouchCoordinates]
+  );
 
   // Initialize Game Engine & Renderer
   useEffect(() => {
@@ -447,15 +526,34 @@ export const GameView: React.FC<GameViewProps> = ({
       ref={containerRef}
       id="game-canvas-container"
       className={`relative w-full h-screen bg-slate-950 overflow-hidden select-none ${
-        settings.mouseControls !== false ? 'cursor-crosshair' : ''
+        controlMode === 'laptop' && settings.mouseControls !== false ? 'cursor-crosshair' : ''
       }`}
+      style={{ touchAction: 'none' }}
     >
-      {/* 2D Canvas */}
+      {/* 2D Canvas with Multi-Touch Screen Pilot Controls */}
       <canvas
         ref={canvasRef}
         id="game-flight-canvas"
-        className="block w-full h-full"
+        className="block w-full h-full touch-none"
+        onTouchStart={handleCanvasTouchStart}
+        onTouchMove={handleCanvasTouchMove}
+        onTouchEnd={handleCanvasTouchEnd}
+        onTouchCancel={handleCanvasTouchEnd}
       />
+
+      {/* Screen Touch Visual Reticle when playing with phone touch */}
+      {touchFeedback && (
+        <div
+          id="screen-touch-reticle"
+          className="absolute pointer-events-none -translate-x-1/2 -translate-y-1/2 z-20 transition-transform"
+          style={{ left: touchFeedback.x, top: touchFeedback.y }}
+        >
+          <div className="w-14 h-14 rounded-full border-2 border-cyan-400/80 animate-ping" />
+          <div className="absolute inset-0 m-auto w-8 h-8 rounded-full border border-pink-400/90 bg-cyan-400/20 shadow-lg shadow-cyan-400/50 flex items-center justify-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-cyan-300 shadow-md shadow-cyan-300" />
+          </div>
+        </div>
+      )}
 
       {/* Cockpit HUD Overlay */}
       {engineRef.current && (
@@ -467,16 +565,20 @@ export const GameView: React.FC<GameViewProps> = ({
             setIsPaused(true);
           }}
           onExitToMainMenu={handleExitToMainMenu}
+          onToggleControlMode={handleToggleControlMode}
+          controlMode={controlMode}
         />
       )}
 
-      {/* On-Screen Touch Controls */}
-      {isTouchDevice && engineRef.current && !missionFailed && (
+      {/* On-Screen Touch Controls (shown in Phone Mode) */}
+      {controlMode === 'phone' && engineRef.current && !missionFailed && (
         <TouchControls
           inputRef={inputRef}
           boostFuel={engineRef.current.ship.boostFuel}
           fuel={engineRef.current.ship.fuel}
           fuelDepletionEnabled={fuelDepletionActive}
+          onToggleControlMode={handleToggleControlMode}
+          controlMode={controlMode}
         />
       )}
 
@@ -602,6 +704,46 @@ export const GameView: React.FC<GameViewProps> = ({
                 <Play className="w-4 h-4 fill-current" />
                 Resume Delivery
               </button>
+
+              {/* In-Game Control Mode Toggle (Laptop <-> Phone) */}
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3 text-left">
+                <div className="flex items-center gap-2 min-w-0">
+                  {controlMode === 'phone' ? (
+                    <Smartphone className="w-4 h-4 text-pink-400 shrink-0" />
+                  ) : (
+                    <Laptop className="w-4 h-4 text-cyan-400 shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-mono font-bold text-slate-200">
+                        Control Setting
+                      </span>
+                      <span
+                        className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${
+                          controlMode === 'phone'
+                            ? 'bg-pink-950/60 text-pink-300 border-pink-500/40'
+                            : 'bg-cyan-950/60 text-cyan-300 border-cyan-500/40'
+                        }`}
+                      >
+                        {controlMode === 'phone' ? 'PHONE' : 'LAPTOP'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400 truncate block">
+                      {controlMode === 'phone'
+                        ? 'Screen touch & buttons'
+                        : 'Keyboard (WASD) & Mouse'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  id="pause-toggle-control-mode"
+                  onClick={handleToggleControlMode}
+                  className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 hover:border-cyan-400 text-xs font-mono font-bold text-cyan-300 transition-colors shrink-0 active:scale-95"
+                  title="Switch control mode"
+                >
+                  To {controlMode === 'phone' ? 'Laptop' : 'Phone'}
+                </button>
+              </div>
 
               {/* In-Game Fuel Consumption Option */}
               <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3 text-left">

@@ -27,6 +27,14 @@ export interface GameEngineInput {
   mouseThrust?: boolean;
   mouseReverse?: boolean;
   mouseBoost?: boolean;
+  // Direct Screen Touch controls
+  touchActive?: boolean;
+  touchWorldX?: number;
+  touchWorldY?: number;
+  touchAngle?: number;
+  touchThrust?: boolean;
+  touchBoost?: boolean;
+  touchReverse?: boolean;
 }
 
 export class GameEngine {
@@ -250,16 +258,20 @@ export class GameEngine {
       this.ship.angle -= baseTurn;
     } else if (input.turnRight && !input.turnLeft) {
       this.ship.angle += baseTurn;
-    } else if (this.settings.mouseControls !== false && input.mouseActive && input.mouseAngle !== undefined) {
-      // Smoothly steer ship nose toward mouse targeting reticle
-      let angleDiff = input.mouseAngle - this.ship.angle;
+    } else if (
+      (input.touchActive && input.touchAngle !== undefined) ||
+      (this.settings.mouseControls !== false && input.mouseActive && input.mouseAngle !== undefined)
+    ) {
+      // Steer ship nose toward direct screen touch position or mouse targeting reticle
+      const targetAngle = input.touchActive && input.touchAngle !== undefined ? input.touchAngle : input.mouseAngle!;
+      let angleDiff = targetAngle - this.ship.angle;
       while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
       while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
-      // Mouse steering rate: responsive yet grounded in chassis turn rate
-      const maxTurn = baseTurn * 1.4;
+      // Steering rate: responsive yet grounded in chassis turn rate
+      const maxTurn = baseTurn * 1.5;
       if (Math.abs(angleDiff) <= maxTurn) {
-        this.ship.angle = input.mouseAngle;
+        this.ship.angle = targetAngle;
       } else {
         this.ship.angle += Math.sign(angleDiff) * maxTurn;
       }
@@ -285,9 +297,9 @@ export class GameEngine {
     const isOutOfFuel = isFuelDepletionEnabled && this.ship.fuel <= 0;
 
     const mouseEnabled = this.settings.mouseControls !== false;
-    const wantsThrust = input.thrust || (mouseEnabled && !!input.mouseThrust);
-    const wantsReverse = input.reverse || (mouseEnabled && !!input.mouseReverse);
-    const wantsBoost = (input.boost || (mouseEnabled && !!input.mouseBoost)) && this.ship.boostFuel > 0.05;
+    const wantsThrust = input.thrust || (mouseEnabled && !!input.mouseThrust) || !!input.touchThrust;
+    const wantsReverse = input.reverse || (mouseEnabled && !!input.mouseReverse) || !!input.touchReverse;
+    const wantsBoost = (input.boost || (mouseEnabled && !!input.mouseBoost) || !!input.touchBoost) && this.ship.boostFuel > 0.05;
 
     if (isOutOfFuel) {
       this.ship.thrusting = false;

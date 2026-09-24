@@ -1,8 +1,9 @@
 // Cosmic Courier - Local Storage & Profile Management
-import { PlayerProfile, MissionResult, PlayerSettings } from '../types/game';
+import { PlayerProfile, MissionResult, PlayerSettings, Mission } from '../types/game';
 import { DEFAULT_PLAYER_PROFILE } from '../game/constants';
 
 const STORAGE_KEY = 'cosmic_courier_profile_v1';
+const CUSTOM_MISSIONS_KEY = 'cosmic_courier_custom_missions_v1';
 
 export function loadPlayerProfile(): PlayerProfile {
   try {
@@ -20,6 +21,12 @@ export function loadPlayerProfile(): PlayerProfile {
         ...DEFAULT_PLAYER_PROFILE.settings,
         difficulty: parsed.settings?.difficulty || 'courier',
         fuelDepletion: parsed.settings?.fuelDepletion ?? true,
+        controlMode:
+          parsed.settings?.controlMode ||
+          (typeof window !== 'undefined' &&
+          ('ontouchstart' in window || (navigator && navigator.maxTouchPoints > 0))
+            ? 'phone'
+            : 'laptop'),
         ...(parsed.settings || {}),
       },
       statistics: {
@@ -159,4 +166,47 @@ export function resetProfile(): PlayerProfile {
   localStorage.removeItem(STORAGE_KEY);
   savePlayerProfile(DEFAULT_PLAYER_PROFILE);
   return DEFAULT_PLAYER_PROFILE;
+}
+
+// Custom Missions (Map Builder) Storage
+export function loadCustomMissions(): Mission[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_MISSIONS_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to load custom missions', err);
+    return [];
+  }
+}
+
+export function saveCustomMission(mission: Mission): Mission[] {
+  try {
+    const existing = loadCustomMissions();
+    const index = existing.findIndex((m) => m.id === mission.id);
+    let updated: Mission[];
+    if (index >= 0) {
+      updated = [...existing];
+      updated[index] = mission;
+    } else {
+      updated = [mission, ...existing];
+    }
+    localStorage.setItem(CUSTOM_MISSIONS_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (err) {
+    console.error('Failed to save custom mission', err);
+    return [];
+  }
+}
+
+export function deleteCustomMission(missionId: string): Mission[] {
+  try {
+    const existing = loadCustomMissions();
+    const updated = existing.filter((m) => m.id !== missionId);
+    localStorage.setItem(CUSTOM_MISSIONS_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (err) {
+    console.error('Failed to delete custom mission', err);
+    return [];
+  }
 }

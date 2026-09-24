@@ -13,6 +13,7 @@ import {
   Briefcase,
   Gauge,
   Flame,
+  Wrench,
 } from 'lucide-react';
 import { soundManager } from '../audio/soundManager';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -23,6 +24,7 @@ interface MainMenuProps {
   onStartCampaign: () => void;
   onOpenContracts: () => void;
   onOpenHangar: () => void;
+  onOpenMapEditor?: () => void;
   onOpenSettings: () => void;
   onUpdateDifficulty?: (diff: GameDifficulty) => void;
   onUpdateSettings?: (settings: Partial<PlayerProfile['settings']>) => void;
@@ -34,6 +36,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onStartCampaign,
   onOpenContracts,
   onOpenHangar,
+  onOpenMapEditor,
   onOpenSettings,
   onUpdateDifficulty,
   onUpdateSettings,
@@ -279,6 +282,22 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             <Rocket className="w-4 h-4 text-cyan-400 shrink-0" />
             <span>Hangar</span>
           </button>
+
+          {/* Map Creator / Sector Architect Button */}
+          {onOpenMapEditor && (
+            <button
+              id="menu-btn-map-creator"
+              onClick={() => {
+                soundManager.playUiClick();
+                onOpenMapEditor();
+              }}
+              className="w-full sm:w-auto flex-1 py-4 px-5 rounded-2xl bg-slate-900/90 hover:bg-slate-800 border-2 border-slate-700 hover:border-emerald-500/60 text-slate-200 font-mono font-bold text-sm tracking-wide flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg"
+              title="Create, build, and test your own custom maps"
+            >
+              <Wrench className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>Map Creator</span>
+            </button>
+          )}
         </div>
 
         {/* Quick Career Stats Bar */}

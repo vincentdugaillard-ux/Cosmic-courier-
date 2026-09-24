@@ -11,6 +11,8 @@ import {
   Home,
   Flame,
   MousePointer,
+  Laptop,
+  Smartphone,
 } from 'lucide-react';
 import { GameEngine } from '../game/gameEngine';
 import { soundManager } from '../audio/soundManager';
@@ -19,9 +21,17 @@ interface HUDProps {
   engine: GameEngine;
   onPause: () => void;
   onExitToMainMenu?: () => void;
+  onToggleControlMode?: () => void;
+  controlMode?: 'laptop' | 'phone';
 }
 
-export const HUD: React.FC<HUDProps> = ({ engine, onPause, onExitToMainMenu }) => {
+export const HUD: React.FC<HUDProps> = ({
+  engine,
+  onPause,
+  onExitToMainMenu,
+  onToggleControlMode,
+  controlMode = 'laptop',
+}) => {
   const { ship, mission, timeRemaining, ringsCollected } = engine;
   const speed = Math.hypot(ship.vx, ship.vy);
   const pad = mission.landingPad;
@@ -120,6 +130,35 @@ export const HUD: React.FC<HUDProps> = ({ engine, onPause, onExitToMainMenu }) =
             >
               <Home className="w-4 h-4 text-cyan-400" />
               <span className="hidden md:inline">Main Menu</span>
+            </button>
+          )}
+
+          {onToggleControlMode && (
+            <button
+              id="hud-btn-toggle-control-mode"
+              onClick={() => {
+                soundManager.playUiClick();
+                onToggleControlMode();
+              }}
+              className="pointer-events-auto flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-900/85 border border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-cyan-300 backdrop-blur-md transition-all shadow-lg font-mono text-xs font-bold active:scale-95"
+              title={
+                controlMode === 'phone'
+                  ? 'Switch back to Laptop / Desktop controls (Keyboard & Mouse)'
+                  : 'Switch to Phone / Mobile controls (Touch screen & buttons)'
+              }
+              aria-label="Toggle Control Mode"
+            >
+              {controlMode === 'phone' ? (
+                <>
+                  <Smartphone className="w-4 h-4 text-pink-400" />
+                  <span className="hidden sm:inline text-pink-300">Phone Mode</span>
+                </>
+              ) : (
+                <>
+                  <Laptop className="w-4 h-4 text-cyan-400" />
+                  <span className="hidden sm:inline text-cyan-300">Laptop Mode</span>
+                </>
+              )}
             </button>
           )}
 

@@ -1,6 +1,6 @@
 // Cosmic Courier - Types and Entity Interfaces
 
-export type ScreenState = 'menu' | 'missionSelect' | 'contracts' | 'briefing' | 'game' | 'results' | 'hangar' | 'settings';
+export type ScreenState = 'menu' | 'missionSelect' | 'contracts' | 'briefing' | 'game' | 'results' | 'hangar' | 'settings' | 'mapEditor';
 
 export type GameDifficulty = 'cadet' | 'courier' | 'veteran' | 'hardcore';
 
@@ -131,6 +131,7 @@ export interface Mission {
   description: string;
   cargoName: string;
   cargoDescription: string;
+  briefingText?: string;
   timeLimit: number;          // In seconds
   rewardCredits: number;
   baseScore: number;
@@ -147,6 +148,7 @@ export interface Mission {
   lasers: LaserBarrierObstacle[];
   bonusRings: BonusRing[];
   routeWaypoints: { x: number; y: number }[];
+  isCustom?: boolean;
 }
 
 export interface ScoreBreakdown {
@@ -183,6 +185,7 @@ export interface MissionResult {
 
 export interface PlayerSettings {
   difficulty: GameDifficulty; // 'cadet' | 'courier' | 'veteran' | 'hardcore'
+  controlMode?: 'laptop' | 'phone'; // 'laptop' = keyboard & mouse aiming, 'phone' = on-screen touch buttons & screen touch flight
   fuelDepletion?: boolean;    // Realistic propellant tank depletion during flights
   mouseControls?: boolean;    // Control ship aiming and flight with computer mouse
   masterVolume: number;     // 0.0 to 1.0

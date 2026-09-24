@@ -15,6 +15,8 @@ import {
   ShieldAlert,
   Flame,
   MousePointer,
+  Laptop,
+  Smartphone,
 } from 'lucide-react';
 import { soundManager } from '../audio/soundManager';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -335,6 +337,83 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <p className="text-[11px] text-slate-400 mt-1">
               Controls the turn rate of the ship when rotating left or right.
             </p>
+          </div>
+
+          {/* Primary Device Control Mode Switcher: Laptop <-> Phone */}
+          <div className="bg-slate-950/80 border-2 border-cyan-500/50 rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-lg shadow-cyan-950/40">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {settings.controlMode === 'phone' ? (
+                  <Smartphone className="w-5 h-5 text-pink-400 shrink-0" />
+                ) : (
+                  <Laptop className="w-5 h-5 text-cyan-400 shrink-0" />
+                )}
+                <div>
+                  <h4 className="text-sm font-mono font-bold text-slate-100 uppercase tracking-wide">
+                    Flight Control Setting
+                  </h4>
+                  <p className="text-xs text-slate-400 font-mono">
+                    Switch between Laptop / Desktop inputs and Phone / Touch controls
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Toggle segmented buttons: Laptop <---> Phone */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-slate-900 border border-slate-800 rounded-xl">
+              <button
+                id="settings-control-laptop"
+                type="button"
+                onClick={() => {
+                  soundManager.playUiClick();
+                  onUpdateSettings({ controlMode: 'laptop' });
+                }}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-mono text-xs font-bold transition-all ${
+                  settings.controlMode !== 'phone'
+                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <Laptop className="w-4 h-4" />
+                <span>Laptop Mode 💻</span>
+              </button>
+
+              <button
+                id="settings-control-phone"
+                type="button"
+                onClick={() => {
+                  soundManager.playUiClick();
+                  onUpdateSettings({ controlMode: 'phone' });
+                }}
+                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-mono text-xs font-bold transition-all ${
+                  settings.controlMode === 'phone'
+                    ? 'bg-pink-500 text-slate-950 shadow-md shadow-pink-500/30'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>Phone Mode 📱</span>
+              </button>
+            </div>
+
+            {/* Mode Description */}
+            <div className="text-xs font-mono p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-300 flex items-start gap-2">
+              {settings.controlMode === 'phone' ? (
+                <div>
+                  <span className="text-pink-400 font-bold block mb-0.5">📱 Active: Phone Touch Controls</span>
+                  <span className="text-slate-300">
+                    Enables on-screen multi-touch buttons (Left/Right steering, Airbrake, Thruster, Afterburner) and direct screen-touch piloting (touch and hold anywhere on the screen to aim and thrust toward your finger).
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <span className="text-cyan-400 font-bold block mb-0.5">💻 Active: Laptop / Desktop Controls</span>
+                  <span className="text-slate-300">
+                    Optimized for keyboard (WASD / Arrow Keys, Space for afterburner boost, B/Down for airbrake) and mouse cursor steering with targeting crosshair.
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Assist Mode Toggle */}

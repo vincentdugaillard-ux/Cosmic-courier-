@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Mission, PlayerProfile, Ship } from '../types/game';
 import { CAMPAIGN_MISSIONS, SHIPS } from '../game/constants';
+import { loadCustomMissions } from '../utils/storage';
 import {
   ArrowLeft,
   Play,
@@ -16,6 +17,8 @@ import {
   ChevronRight,
   Home,
   Briefcase,
+  Wrench,
+  Plus,
 } from 'lucide-react';
 import { soundManager } from '../audio/soundManager';
 
@@ -25,6 +28,7 @@ interface MissionSelectProps {
   onBackToMenu: () => void;
   onOpenHangar: () => void;
   onOpenContracts?: () => void;
+  onOpenMapEditor?: () => void;
 }
 
 export const MissionSelect: React.FC<MissionSelectProps> = ({
@@ -33,7 +37,10 @@ export const MissionSelect: React.FC<MissionSelectProps> = ({
   onBackToMenu,
   onOpenHangar,
   onOpenContracts,
+  onOpenMapEditor,
 }) => {
+  const [customMissions] = useState<Mission[]>(() => loadCustomMissions());
+  const [sectorTab, setSectorTab] = useState<'campaign' | 'custom'>('campaign');
   // Determine unlock state for each mission
   const isMissionUnlocked = (mission: Mission, index: number): boolean => {
     if (index === 0 || mission.unlockRequirement.type === 'default') return true;
@@ -71,10 +78,12 @@ export const MissionSelect: React.FC<MissionSelectProps> = ({
     }
   };
 
-  const selectedUnlocked = isMissionUnlocked(
-    selectedMission,
-    CAMPAIGN_MISSIONS.findIndex((m) => m.id === selectedMission.id)
-  );
+  const selectedUnlocked = selectedMission.isCustom
+    ? true
+    : isMissionUnlocked(
+        selectedMission,
+        CAMPAIGN_MISSIONS.findIndex((m) => m.id === selectedMission.id)
+      );
 
   const selectedCompleted = profile.completedMissionIds.includes(selectedMission.id);
   const bestScore = profile.bestScores[selectedMission.id] || 0;
@@ -154,15 +163,77 @@ export const MissionSelect: React.FC<MissionSelectProps> = ({
       <main className="max-w-6xl w-full mx-auto my-auto py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Mission Directory */}
         <div className="lg:col-span-6 flex flex-col gap-3">
-          <div className="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
-            <span>AVAILABLE CONTRACTS ({CAMPAIGN_MISSIONS.length})</span>
-            <span>
-              {profile.completedMissionIds.length} / {CAMPAIGN_MISSIONS.length} COMPLETED
-            </span>
+          {/* Tab Selection: Campaign vs Custom Sectors */}
+          <div className="flex items-center gap-2 p-1 bg-slate-900 border border-slate-800 rounded-xl">
+            <button
+              id="tab-campaign-sectors"
+              onClick={() => {
+                soundManager.playUiClick();
+                setSectorTab('campaign');
+                if (selectedMission.isCustom && CAMPAIGN_MISSIONS.length > 0) {
+                  setSelectedMission(CAMPAIGN_MISSIONS[0]);
+                }
+              }}
+              className={`flex-1 py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all ${
+                sectorTab === 'campaign'
+                  ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Campaign ({CAMPAIGN_MISSIONS.length})
+            </button>
+
+            <button
+              id="tab-custom-sectors"
+              onClick={() => {
+                soundManager.playUiClick();
+                setSectorTab('custom');
+                if (customMissions.length > 0) {
+                  setSelectedMission(customMissions[0]);
+                }
+              }}
+              className={`flex-1 py-2 px-3 rounded-lg font-mono text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                sectorTab === 'custom'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Wrench className="w-3.5 h-3.5" />
+              <span>Custom Maps ({customMissions.length})</span>
+            </button>
           </div>
 
-          <div className="flex flex-col gap-2.5 max-h-[580px] overflow-y-auto pr-1">
-            {CAMPAIGN_MISSIONS.map((mission, idx) => {
+          {/* Create Custom Map Button */}
+          {sectorTab === 'custom' && onOpenMapEditor && (
+            <button
+              id="mission-btn-create-map"
+              onClick={() => {
+                soundManager.playUiClick();
+                onOpenMapEditor();
+              }}
+              className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-mono text-xs font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/50 transition-all active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Open Map Creator (Build Your Own Map)</span>
+            </button>
+          )}
+
+          <div className="flex items-center justify-between text-xs font-mono text-slate-400 px-1">
+            <span>
+              {sectorTab === 'campaign'
+                ? `AVAILABLE CONTRACTS (${CAMPAIGN_MISSIONS.length})`
+                : `CUSTOM SECTORS (${customMissions.length})`}
+            </span>
+            {sectorTab === 'campaign' && (
+              <span>
+                {profile.completedMissionIds.length} / {CAMPAIGN_MISSIONS.length} COMPLETED
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2.5 max-h-[520px] overflow-y-auto pr-1">
+            {sectorTab === 'campaign' ? (
+              CAMPAIGN_MISSIONS.map((mission, idx) => {
               const unlocked = isMissionUnlocked(mission, idx);
               const completed = profile.completedMissionIds.includes(mission.id);
               const isSelected = selectedMission.id === mission.id;
@@ -243,7 +314,83 @@ export const MissionSelect: React.FC<MissionSelectProps> = ({
                   </div>
                 </button>
               );
-            })}
+            })
+          ) : customMissions.length === 0 ? (
+            <div className="text-center py-12 px-4 bg-slate-900/40 border border-slate-800/80 rounded-2xl flex flex-col items-center gap-3">
+              <Wrench className="w-8 h-8 text-emerald-400" />
+              <div>
+                <h4 className="text-sm font-mono font-bold text-slate-200">
+                  NO CUSTOM SECTORS FOUND
+                </h4>
+                <p className="text-xs font-mono text-slate-400 mt-1 max-w-sm">
+                  Design custom flight paths, place asteroids, laser gates, and black holes in the Map Creator!
+                </p>
+              </div>
+              {onOpenMapEditor && (
+                <button
+                  onClick={() => {
+                    soundManager.playUiClick();
+                    onOpenMapEditor();
+                  }}
+                  className="mt-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono text-xs font-bold transition-colors"
+                >
+                  Open Map Creator Now
+                </button>
+              )}
+            </div>
+          ) : (
+            customMissions.map((mission) => {
+              const isSelected = selectedMission.id === mission.id;
+              const badge = getDifficultyBadge(mission.difficulty);
+
+              return (
+                <button
+                  key={mission.id}
+                  id={`custom-mission-card-${mission.id}`}
+                  onClick={() => {
+                    soundManager.playUiClick();
+                    setSelectedMission(mission);
+                  }}
+                  className={`w-full text-left p-4 rounded-2xl border transition-all flex items-center justify-between gap-4 ${
+                    isSelected
+                      ? 'bg-slate-900 border-emerald-400 shadow-lg shadow-emerald-950/60 scale-[1.01]'
+                      : 'bg-slate-900/60 hover:bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-emerald-950/80 text-emerald-400 border border-emerald-500/40">
+                      <span className="font-mono font-bold text-xs">{mission.codeName}</span>
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-sm font-bold text-slate-200 truncate">
+                          {mission.title}
+                        </span>
+                        <span
+                          className={`text-[9px] font-mono px-2 py-0.5 rounded-full border font-bold ${badge.bg}`}
+                        >
+                          CUSTOM
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 font-mono truncate">
+                        {mission.asteroids.length} Obstacles • {mission.rings.length} Rings • {mission.timeLimit}s
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="text-xs font-mono font-bold text-amber-400">
+                      +{mission.rewards.credits} ₢
+                    </div>
+                    <div className="text-[10px] font-mono text-emerald-400">
+                      User Sector
+                    </div>
+                  </div>
+                </button>
+              );
+            })
+          )}
           </div>
         </div>
 
